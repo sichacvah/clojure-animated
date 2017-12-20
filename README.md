@@ -16,7 +16,7 @@ A Clojurescript lib for animate things
     (println "height- " new)))
 
 ; init animation-conifg
-(def config (animated/init))
+(def config (assoc (animated/init 0) :type :timing))
 
 ; start animation
 
@@ -26,8 +26,6 @@ A Clojurescript lib for animate things
 
 (comment
   (async/put! stop-chan nil))
-
-
 ```
 
 ## License

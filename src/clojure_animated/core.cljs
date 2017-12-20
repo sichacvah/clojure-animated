@@ -224,12 +224,12 @@
         last-date (date-now)]
       (go-loop []
         (let [[v c] (async/alts! [stops ticks])]
+          (reset! *value (animate v config))
           (cond
             (= c stops) (do (println "is stopped") (>! stops {:finished false}) (async/close! stops))
             (is-done v config) (do (println "is done") (>! stops {:finished true}) (async/close! stops))
             :else
               (do
-                (reset! *value (animate v config))
                 (recur)))))
     stops))
 
