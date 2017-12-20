@@ -1,6 +1,7 @@
 (ns clojure-animated.examples
   (:require
     [rum.core :as rum]
+    [cljs.core.async :as async]
     [clojure-animated.core :as animated]))
 
 (enable-console-print!)
@@ -50,68 +51,67 @@
 (defn rotate [angle]
   (str "rotate(" angle ")"))
 
+(defn init-animation []
+  {:start     0
+    :delay     0
+    :duration  3600
+    :ease      identity
+    :interpolation identity
+    :from      0
+    :to        3600
+    :type      :timing})
+
 (defn animate-angle [state]
   (let [*angle (::angle state)
-        timing (animated/timing! *angle (init-animation))
-        start! (:start timing)]
-      (start!)
-      state))
+        stop-chan (animated/start- (init-animation) *angle)]
+      (assoc state :stop-chan stop-chan)))
 
-(rum/defcs annulus < rum/static (rum/local 0 ::angle)
-  {:did-mount animate-angle}
-  [state coords]
+(rum/defc annulus < rum/static
+  [coords angle]
   (let [radius 400
         g (gear 80 radius true)
-        [x y] coords
-        *angle (::angle state)]
-    [:g {:class "annulus"} [:path {:d g :transform (str (translate x y) (rotate (- (/ @*angle radius))))}]]))
+        [x y] coords]
+    [:g {:class "annulus"} [:path {:d g :transform (str (translate x y) (rotate (- (/ angle radius))))}]]))
 
-(rum/defcs sun < rum/static (rum/local 0 ::angle)
-  {:did-mount animate-angle}
-  [state coords]
+(rum/defc sun < rum/static
+  [coords angle]
   (let [radius 80
         g (gear 16 radius false)
-        [x y] coords
-        *angle (::angle state)]
-    [:g {:class "sun"} [:path {:d g :transform (str (translate x y) (rotate ( / @*angle radius)))}]]))
+        [x y] coords]
+    [:g {:class "sun"} [:path {:d g :transform (str (translate x y) (rotate ( / angle radius)))}]]))
 
 (def x (sin (/ (* 2 pi) 3)))
 (def y (cos (/ (* 2 pi) 3)))
 
-(rum/defcs plannet < rum/static (rum/local 0 ::angle)
-  {:did-mount animate-angle}
-  [state coords]
+(rum/defc plannet < rum/static
+  [coords angle]
   (let [[x y] coords
         radius 160
-        g (gear 32 radius false)
-        *angle (::angle state)]
-    [:g {:class "planet"} [:path {:d g  :transform (str (translate x y) (rotate (- (/ @*angle radius))))}]]))
+        g (gear 32 radius false)]
+    [:g {:class "planet"} [:path {:d g  :transform (str (translate x y) (rotate (- (/ angle radius))))}]]))
 
+(rum/defcs planetar < rum/static (rum/local 0 ::angle)
+  {:did-mount animate-angle}
+  [state]
+  (let [angle @(::angle state)
+        stop-chan (:stop-chan state)
+        cx 450
+        cy 540]
+    [:g {:on-click (fn [event] (do (.preventDefault event) (async/put! stop-chan 0)))}
+      [:g {:transform "scale(0.5)"}
+        (annulus [cx cy] angle)
+        (plannet [cx (- cy (* 80 3))] angle)
+        (plannet [(+ cx (* x 80 3)) (- cy (* y 80 3))] angle)
+        (plannet [(- cx (* x 80 3)) (- cy (* y 80 3))] angle)
+        (sun [cx cy] angle)]
+      [:text {:x 110 :y 50 :fill "#000" :stroke "#000" :font-size "18px" :width "500px" :height "150px"} "CLICK FOR STOP ANIMATION"]]))
 
-
-(defn init-animation []
-  {:start     0
-   :delay     0
-   :duration  3600
-   :ease      identity
-   :interpolation identity
-   :from      0
-   :to        3600})
-
-
-(rum/defc planetar < rum/static []
-    [:g {:transform "scale(0.55)"}
-      (annulus [450 450])
-      (plannet [450 (- 450 (* 80 3))])
-      (plannet [(+ 450 (* x 80 3)) (- 450 (* y 80 3))])
-      (plannet [(- 450 (* x 80 3)) (- 450 (* y 80 3))])
-      (sun [450 450])])
-  
 (rum/defc canvas < rum/static []
   [:svg {:width   "1000"
          :height "1000"
          :xmlns   "http://www.w3.org/2000/svg"
          :id     "svg-canvas"}
-      (planetar)])
+      [:g
+        (planetar)]])
 
 (rum/mount (canvas) (. js/document getElementById "app"))

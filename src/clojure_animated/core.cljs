@@ -1,6 +1,6 @@
 (ns clojure-animated.core
-  (:require [cljs.core.async :as async]))
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]])  
+  (:require [cljs.core.async :as async :refer [<! >!]])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))  
 
 (enable-console-print!)
 
@@ -183,79 +183,54 @@
                js/window.msCancelAnimationFrame))
       js/clearTimeout))
 
-
-(def timing-animation-config
-  {:duration 500
-   :easing default-ease
-   :delay   0})
-
 (def date-now js/Date.now)
 
-(defn start! [*state update-val & callback]
-  (let [id (schedule (fn [ts]
-                       (let [prev-date (:prev-date @*state)
-                             config (:animation @*state)
-                             clock  (- (date-now) prev-date)
-                             cb (first callback)
-                             next-val (animate clock config)]
-                            (update-val next-val)
-                            (if (is-done clock config)
-                                (when (some? cb) (cb {:finished true}))
-                                (start! *state update-val cb)))))]
-    (swap! *state assoc :id id)))
+(defn init-timing []
+  {:start 0
+   :from  0
+   :to    1
+   :ease  default-ease
+   :intperpolation identity
+   :duration default-duration
+   :delay 0
+   :type  :timing})
 
 
-(defn timing! [*value config]
-  (let [to    (:to config)
-        animation-config  (from @*value config)
-        state {:id nil
-               :prev-date nil
-               :animation animation-config}
-        *state (atom state)
-        update-val #(reset! *value %)]
-      {:start (fn  [& cb]
-                  (do
-                      (swap! *state assoc :prev-date (date-now) :cb (first cb) :animation (from @*value animation-config))
-                      (start! *state update-val (first cb))
-                      *state))
-       :stop   (fn [] (let [cb (:cb @*state)]
-                        (when (some? (:id @*state)) (stop-schedule (:id @*state)))
-                        (when (some? cb) (cb {:finished false}))))}))
-
-(defn start-seq! [*stopped animations & callback]
-  (let [current-animation (first animations)
-        is-stopped? @*stopped
-        cb (first callback)
-        start (:start current-animation)]
-      (when (and (not is-stopped?) (some? current-animation))
-        (start (fn [res] (do (when (some? cb) (cb)) (start-seq! *stopped (rest animations) cb)))))))
+(defn schedule! []
+  (let [ch (async/chan)]
+    (schedule #(async/close! ch))
+    ch))
 
 
-(defn sequence-animations [animations]
-  (let [*stopped (atom false)
-        *cb (atom nil)]
-    {:start (fn [& cb]
+(defmulti start- :type)
+
+(defn next-tick [last-date]
+  (let [now (date-now)]
+    (- now last-date)))
+
+
+(defn ticks->chan []
+  (let [last-date (date-now)
+        ch (async/chan)]
+    (go-loop [clock 0]
+      (>! ch clock)
+      (<! (schedule!))
+      (recur (next-tick last-date)))
+    ch))
+
+(defmethod start- :timing [config *value]
+  (let [stops (async/chan)
+        ticks (ticks->chan)
+        last-date (date-now)]
+      (go-loop []
+        (let [[v c] (async/alts! [stops ticks])]
+          (cond
+            (= c stops) (do (println "is stopped") (>! stops {:finished false}) (async/close! stops))
+            (is-done v config) (do (println "is done") (>! stops {:finished true}) (async/close! stops))
+            :else
               (do
-                (reset! *cb (first cb))
-                (start-seq! *stopped animations cb)))
-     :stop  (fn []
-              (doseq [anim animations
-                      :let [stop (:stop anim)]]
-                  (stop)
-                  (when (some? @*cb) (@*cb {:finished false}))))}))
+                (reset! *value (animate v config))
+                (recur)))))
+    stops))
 
-
-(defn parallel-animations [animations]
-  (let [*count (atom (count animations))
-        *cb    (atom nil)]
-    {:start (fn [& callback]
-              (doseq [anim animations
-                      :let [start (:start anim)
-                            cb (first callback)]]
-                  (reset! *cb cb)
-                  (start (fn [res] (do (reset! *count dec)
-                                      (when (and (some? cb) (= 0 @*count)) (cb {:finished true})))))))
-     :stop (fn [] (do (doseq [anim animations
-                              :let [stop (:stop anim)]]
-                        (stop))
-                      (when (some? @*cb) (@*cb {:finished false}))))}))
+(defmethod start- :default [& _] (println (str "no method allowed")))
