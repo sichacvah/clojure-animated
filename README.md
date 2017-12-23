@@ -5,7 +5,6 @@ A Clojurescript lib for animate things
 ## Usage
 
 ```clojure
-(require '(cljs.core.async :as async))
 (require '(clojure-animated.core :as animated))
 
 ; create some value to animate
@@ -15,17 +14,17 @@ A Clojurescript lib for animate things
   (fn [key atom old new]
     (println "height- " new)))
 
-; init animation-conifg
-(def config (assoc (animated/init 0) :type :timing))
+; init animation
+(def timing (animated/timing *height {:from 0 :to 100 :duration 1000}))
 
 ; start animation
 
-(def stop-chan (animated/start- config *height))
+(def animation (animated/start! timing)
 
 ; if you want to stop animation. you cat put to stop-chan
 
 (comment
-  (async/put! stop-chan nil))
+  (animated/stop! animation))
 ```
 
 ## License

@@ -13,7 +13,7 @@
 
   :profiles       {:dev {:source-paths ["examples"]}}
 
-  :aliases        {"package" ["do" ["clean"] ["test"] ["clean"] ["cljsbuild" "once" "advanced"] ["run" "-m" "clojure-animated.examples-page"]]}
+  :aliases        {"package" ["do" ["clean"] ["test"] ["clean"] ["cljsbuild" "once" "advanced"]]}
 
   :cljsbuild
   {:builds
@@ -21,7 +21,7 @@
       :source-paths ["src" "examples" "test"]
       :compiler
       {:main            clojure-animated.examples
-       :output-to       "target/mapin.js"
+       :output-to       "target/main.js"
        :optimizations   :advanced
        :source-map      "target/main.js.map"
        :pretty-print    false

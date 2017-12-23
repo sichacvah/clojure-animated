@@ -65,47 +65,50 @@
 
 (defn animate-angle [state]
   (let [*angle (::angle state)
-        animation (animated/start! (animated/decay *angle {:velocity 20 :deceleration 0}))]
+        animation (animated/start! (animated/decay *angle {:velocity 10 :deceleration 0}))]
       (assoc state :animation animation)))
 
 (rum/defc annulus < rum/static
-  [coords angle]
-  (let [radius 400
-        g (gear 80 radius true)
-        [x y] coords]
-    [:g {:class "annulus"} [:path {:d g :transform (str (translate x y) (rotate (- (/ angle radius))))}]]))
+  [radius]
+  (let [g (gear 80 radius true)]
+     [:path {:d g}]))
 
 (rum/defc sun < rum/static
-  [coords angle]
-  (let [radius 80
-        g (gear 16 radius false)
-        [x y] coords]
-    [:g {:class "sun"} [:path {:d g :transform (str (translate x y) (rotate ( / angle radius)))}]]))
+  [radius]
+  (let [g (gear 16 radius false)]
+    [:path {:d g}]))
 
 (def x (sin (/ (* 2 pi) 3)))
 (def y (cos (/ (* 2 pi) 3)))
 
 (rum/defc plannet < rum/static
-  [coords angle]
-  (let [[x y] coords
-        radius 160
-        g (gear 32 radius false)]
-    [:g {:class "planet"} [:path {:d g  :transform (str (translate x y) (rotate (- (/ angle radius))))}]]))
+  [radius]
+  (let [g (gear 32 radius false)]
+    [:path {:d g}]))
+
+(rum/defc rotor < rum/static [angle radius [x y] class component]
+  [:g {:class class :transform (str (translate x y) (rotate (- (/ angle radius))))} component])
 
 (rum/defcs planetar < rum/static (rum/local 0 ::angle)
   {:did-mount animate-angle}
   [state]
   (let [angle @(::angle state)
         animation (:animation state)
+        radius 80
+        annulus-radius (* 5 radius)
+        planet-radius  (* 2 radius)
         cx 450
         cy 540]
     [:g {:on-click (fn [event] (do (.preventDefault event) (animated/stop! animation)))}
       [:g {:transform "scale(0.5)"}
-        (annulus [cx cy] angle)
-        (plannet [cx (- cy (* 80 3))] angle)
-        (plannet [(+ cx (* x 80 3)) (- cy (* y 80 3))] angle)
-        (plannet [(- cx (* x 80 3)) (- cy (* y 80 3))] angle)
-        (sun [cx cy] angle)]
+        (rotor angle (- annulus-radius) [cx cy] "annulus" (annulus annulus-radius))
+        (rotor angle (- planet-radius) [cx (- cy (* radius 3))] "planet" (plannet planet-radius))
+        (rotor angle (- planet-radius) [(+ cx (* x radius 3)) (- cy (* y radius 3))] "planet" (plannet planet-radius))
+        (rotor angle (- planet-radius) [(- cx (* x radius 3)) (- cy (* y radius 3))] "planet" (plannet planet-radius))
+        
+        ; (plannet [(+ cx (* x 80 3)) (- cy (* y 80 3))] angle)
+        ; (plannet [(+ cx (* x 80 3)) (- cy (* y 80 3))] angle)
+        (rotor angle radius [cx cy] "sun" (sun radius))]
       [:text {:x 110 :y 50 :fill "#000" :stroke "#000" :font-size "18px" :width "500px" :height "150px"} "CLICK FOR STOP ANIMATION"]]))
 
 (rum/defc canvas < rum/static []
