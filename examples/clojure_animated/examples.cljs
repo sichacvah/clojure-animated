@@ -2,7 +2,8 @@
   (:require
     [rum.core :as rum]
     [cljs.core.async :as async]
-    [clojure-animated.core :as animated]))
+    [clojure-animated.core :as animated])
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (enable-console-print!)
 (def count (atom 0))
@@ -61,10 +62,11 @@
     :to        3600
     :type      :timing})
 
+
 (defn animate-angle [state]
   (let [*angle (::angle state)
-        stop-chan (animated/start- (init-animation) *angle)]
-      (assoc state :stop-chan stop-chan)))
+        animation (animated/start! (animated/decay *angle {:velocity 20 :deceleration 0}))]
+      (assoc state :animation animation)))
 
 (rum/defc annulus < rum/static
   [coords angle]
@@ -94,10 +96,10 @@
   {:did-mount animate-angle}
   [state]
   (let [angle @(::angle state)
-        stop-chan (:stop-chan state)
+        animation (:animation state)
         cx 450
         cy 540]
-    [:g {:on-click (fn [event] (do (.preventDefault event) (async/put! stop-chan 0)))}
+    [:g {:on-click (fn [event] (do (.preventDefault event) (animated/stop! animation)))}
       [:g {:transform "scale(0.5)"}
         (annulus [cx cy] angle)
         (plannet [cx (- cy (* 80 3))] angle)

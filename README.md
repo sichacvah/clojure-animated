@@ -4,7 +4,7 @@ A Clojurescript lib for animate things
 
 ## Usage
 
-```
+```clojure
 (require '(cljs.core.async :as async))
 (require '(clojure-animated.core :as animated))
 

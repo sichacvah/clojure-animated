@@ -1,10 +1,9 @@
 (ns clojure-animated.easing)
 
-(def default-duration 750)
 (def pi (.-PI js/Math))
 (def cos js/Math.cos)
 (def pow js/Math.pow)
-(def sin js/Math.sin)§
+(def sin js/Math.sin)
 
 (defn default-ease [x]
   (/ (- 1 (js/Math.cos (* pi x))) 2))
