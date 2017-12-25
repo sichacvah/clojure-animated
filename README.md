@@ -32,8 +32,8 @@ You can also compose animations
 
 ```clojure
 (animated/order    [(animated/timing *cx {:from 450 :to 1500 :duration 1500})
-                                      (animated/parallel [(animated/spring *angle {:from 0 :to 3600})
-                                                          (animated/timing *cy {:from 450 :to 1000 :duration 1500})])])
+                    (animated/parallel [(animated/spring *angle {:from 0 :to 3600})
+                                        (animated/timing *cy {:from 450 :to 1000 :duration 1500})])])
 ```
 
 ## License
