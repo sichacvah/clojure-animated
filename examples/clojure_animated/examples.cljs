@@ -2,7 +2,7 @@
   (:require
     [rum.core :as rum]
     [cljs.core.async :as async]
-    [clojure-animated.animated :as animated])
+    [clojure-animated.core :as animated])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (enable-console-print!)
@@ -62,19 +62,9 @@
   (let [*angle (::angle state)
         *cy    (::cy state)
         *cx    (::cx state)
-        animation (animated/start!
-                      (animated/parallel [(animated/timing *cx {:from 450 :to 1500 :duration 1500})
-                                          (animated/timing *cy {:from 450 :to 1000 :duration 1500})
-                                          (animated/spring *angle {:from 0 :to 3600})])
-                      (fn [x] x))]
-        ; animation (animated/start! (animated/spring *angle {:from 0 :to 3600}) (fn [x] x))]
-        ; animation (animated/start!
-        ;             (animated/order
-        ;               [(animated/parallel      [(animated/timing *cx    {:from 450 :to 1500 :duration 1000})
-        ;                                         (animated/timing *cy    {:from 450 :to 1000 :duration 1000})])
-        ;                (animated/parallel      [(animated/spring *angle {:from 0 :to 3600})
-        ;                                         (animated/timing *cy     {:from 1000 :to 450 :duration 1000})])
-        ;                (animated/decay *cx {:from 1500 :velocity 100   :interpolation (fn [x] (- x))})]))]
+        animation (animated/order    [(animated/timing *cx {:from 450 :to 1500 :duration 1500})
+                                      (animated/parallel [(animated/spring *angle {:from 0 :to 3600})
+                                                          (animated/timing *cy {:from 450 :to 1000 :duration 1500})])])]
       (assoc state :animation animation)))
 
 (rum/defc annulus < rum/static
@@ -99,7 +89,7 @@
   [:g {:class class :transform (str (translate x y) (rotate (- (/ angle radius))))} component])
 
 (rum/defcs planetar < rum/static (rum/local 0 ::angle) (rum/local 450 ::cy) (rum/local 450 ::cx)
-  {:did-mount animate-angle}
+  {:will-mount animate-angle}
   [state]
   (let [angle @(::angle state)
         animation (:animation state)
@@ -108,7 +98,8 @@
         planet-radius  (* 2 radius)
         cx @(::cx state)
         cy @(::cy state)]
-    [:g {:on-click (fn [event] (do (.preventDefault event) (animated/stop! animation)))}
+    [:g {:on-click (fn [event] (do (.preventDefault event) (animated/start! animation (fn [x] (println x)))))
+         :on-double-click (fn [event] (animated/stop! animation))}
       [:g {:transform "scale(0.5)"}
         (rotor angle (- annulus-radius) [cx cy] "annulus" (annulus annulus-radius))
         (rotor angle (- planet-radius) [cx (- cy (* radius 3))] "planet" (plannet planet-radius))
