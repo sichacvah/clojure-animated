@@ -36,44 +36,34 @@
 
 (def rk4 (memoize rk4*))
 
-(def *spring-state (atom nil))
-
-(defn update-spring-state! [ticks]
-  (go-loop []
-    (let [tick (<! ticks)]
-      (if (some? tick)
-        (let [[next _] tick
-              [x v time] next]
-          (swap! *spring-state assoc :x x :v v :time time)
-          (recur))
-        (reset! *spring-state nil)))))
-
 (deftype Spring [*value config stops-ch ticks-ch]
   IAnimated
-  (is-done? [this [_ spring-state]]
+  (config [_] config)
+
+  (is-done? [this state]
     (let [{:keys [to treshold]} config
-          {:keys [x v]} spring-state]
-      (and (<= (js/Math.abs (- to x)) treshold)
-           (<= (js/Math.abs v) treshold))))
-  (animate  [this [time spring-state]]
+          {:keys [value velocity]} state]
+      (and (<= (js/Math.abs (- to value)) treshold)
+           (<= (js/Math.abs velocity) treshold))))
+  (animate  [this [time state]]
     (let [{:keys [to]} config
-          prev-x (:x spring-state)
-          prev-v (:v spring-state)
-          prev-time (:time spring-state)
+          prev-x (:value state)
+          prev-v (:velocity state)
+          prev-time (:time state)
           dt  (min 1 (/ (- time prev-time) 10.0))
           [x v] (rk4 prev-x prev-v dt config)]
-        (if (is-done? this [time spring-state])
-          [to 0 time]
-          [x v time])))
-  (update!  [this value]
-    (let [update! (:update! config)
-          [x v] value]
-      (if (some? update!) (update! value) (reset! *value x))))
-  (start!   [this] (do
-                      (reset! *spring-state {:x (:from config) :v (:velocity config) :time 0})
-                      (update-spring-state! ticks-ch)
-                      (utils/perform-start! this stops-ch ticks-ch *spring-state)))
-  (stop!    [this] (async/close! stops-ch)))
+        (if (is-done? this state)
+          {:value to :time time :velocity 0}
+          {:value x  :time time :velocity v})))
+  (start-with-notify! [this cb] (utils/perform-start! this stops-ch ticks-ch (utils/config->state config) cb))
+  (update!  [this {:keys [value]}]
+    (let [update! (:update! config)]
+      (if (some? update!) (update! value) (reset! *value value))))
+  (start!   [this] (let [state (utils/config->state config)]
+                      (utils/perform-start! this stops-ch ticks-ch state)))
+  (stop!    [_] (async/put! stops-ch {:finished false}))
+  (ticks-ch [_] ticks-ch)
+  (stop-ch  [_] stops-ch))
 
 (defn spring [*value config']
   (let [stops (async/chan)

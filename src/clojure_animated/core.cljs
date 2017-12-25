@@ -3,6 +3,7 @@
             [clojure-animated.spring :as spring]
             [clojure-animated.timing :as timing]
             [clojure-animated.decay  :as decay]
+            [clojure-animated.collection :as collection]
             [clojure-animated.protocols :as protocols])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))  
 
@@ -17,3 +18,5 @@
 (def animate  protocols/animate)
 (def update!  protocols/update!)
 (def stop!    protocols/stop!)
+(def order    collection/order)
+(def parallel collection/parallel)

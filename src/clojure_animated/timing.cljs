@@ -1,5 +1,5 @@
 (ns clojure-animated.timing
-  (:require [clojure-animated.protocols :as protocols :refer [IAnimated start! is-done? animate update!]]
+  (:require [clojure-animated.protocols :as protocols :refer [IAnimated start! is-done? animate update! stop!]]
             [cljs.core.async :as async :refer [<! >!]]
             [clojure-animated.utils :as utils])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -29,21 +29,26 @@
 
 (deftype Timing [*value config stops-ch ticks-ch]
   IAnimated
-  (is-done? [this [time]]
-    (let [{:keys [start delay from to duration]} config]
+  (config [_] config)
+  (is-done? [this state]
+    (let [{:keys [start delay from to duration]} config
+          time (:time state)]
       (>= time (+ start delay duration))))
-  (animate  [this [time]]
+  (animate  [this [time _]]
       (let [{:keys [start delay speed ramp from to ease interpolation duration]} config
             fr (clamp 0 1 (/ (- time start delay) duration))
             eased (interpolation (ease fr))]
        (if (is-done? this [time])
-          to
-          (+ from (* (- to from) eased)))))
-  (update!  [this value] 
-    (let [update! (:update! config)]
+          {:value to :time time}
+          {:value (+ from (* (- to from) eased)) :time time})))
+  (update!  [this state]
+    (let [update! (:update! config)
+          value (:value state)]
       (if (some? update!) (update! value) (reset! *value value))))
-  (start!   [this] (utils/perform-start! this stops-ch ticks-ch))
-  (stop!    [this] (async/close! stops-ch)))
+  (start!   [this] (utils/perform-start! this stops-ch ticks-ch (utils/config->state config)))
+  (stop!    [_] (async/put! stops-ch {:finished false}))
+  (ticks-ch [_] ticks-ch)
+  (stop-ch  [_] stops-ch))
 
 
 (defn timing [*value config']

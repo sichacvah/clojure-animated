@@ -14,18 +14,26 @@
 
 (deftype Decay [*value config stops-ch ticks-ch]
   IAnimated
-  (is-done? [this [time]]
-    (let [{:keys [velocity deceleration]} config]
-      (>= 0 (- velocity (/ (* deceleration time) 1000)))))
-  (animate  [this [time]]
+  (config [_] config)
+  (is-done? [this state]
+    (let [{:keys [velocity time]} state]
+      (>= 0 velocity)))
+  (animate  [this [time state]]
       (let [{:keys [from velocity deceleration interpolation duration]} config
-            s (- (* velocity time) (/ (* deceleration time time) 2 1000 1000))]
-         (+ from (interpolation s))))
-  (update!  [this value]
+            v (-  velocity (/ (* deceleration time) 1000))
+            s (- (/ (* velocity time) 1000) (/ (* deceleration time time) 2 1000 1000))]
+         {:value     (+ from (interpolation s))
+          :velocity v
+          :time     time}))
+  (start-with-notify! [this cb] (utils/perform-start! this stops-ch ticks-ch (utils/config->state config) cb))
+  (update!  [this {:keys [value]}]
     (let [update! (:update! config)]
       (if (some? update!) (update! value) (reset! *value value))))
-  (start!   [this] (utils/perform-start! this stops-ch ticks-ch))
-  (stop!    [this] (async/close! stops-ch)))
+  (start!   [this] (utils/perform-start! this stops-ch ticks-ch (utils/config->state config)))
+  (stop!    [_] (async/put! stops-ch {:finished false}))
+  ; (stop!    [this] (async/close! stops-ch))
+  (ticks-ch [_] ticks-ch)
+  (stop-ch  [_] stops-ch))
 
 (defn decay [*value config']
   (let [stops (async/chan)
