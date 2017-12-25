@@ -1,9 +1,7 @@
 (ns clojure-animated.examples
   (:require
     [rum.core :as rum]
-    [cljs.core.async :as async]
-    [clojure-animated.core :as animated])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+    [clojure-animated.core :as animated]))
 
 (enable-console-print!)
 

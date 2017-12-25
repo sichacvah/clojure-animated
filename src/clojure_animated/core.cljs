@@ -1,7 +1,5 @@
 (ns clojure-animated.core
-  (:require [cljs.core.async :as async :refer [>! <!]]
-            [clojure-animated.utils :as utils])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require [clojure-animated.utils :as utils]))
 
 (def now js/Date.now)
 
@@ -21,22 +19,8 @@
                 js/window.msCancelAnimationFrame))
     js/clearTimeout))
 
-(defn schedule-chan! []
-  (let [ch (async/chan)]
-    (schedule! #(async/close! ch))
-    ch))
-
 (defn next-tick! [start-date]
     (- (now) start-date))
-
-(defn ticks->chan [ch]
-  (let [start-date (now)]
-    (go-loop []
-      (<! (schedule-chan!))
-      (>! ch (next-tick! start-date))
-      (recur))
-    ch))
-
 
 (def pi (.-PI js/Math))
 (def cos js/Math.cos)
