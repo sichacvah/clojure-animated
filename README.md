@@ -2,6 +2,12 @@
 
 A Clojurescript lib for animate things
 
+## Install with lein
+
+```clojure
+[clojure-animated "0.1.0-SNAPSHOT"]
+```
+
 ## Usage
 
 ```clojure
