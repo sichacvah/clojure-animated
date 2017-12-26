@@ -31,9 +31,13 @@ A Clojurescript lib for animate things
 You can also compose animations
 
 ```clojure
-(animated/order    [(animated/timing *cx {:from 450 :to 1500 :duration 1500})
-                    (animated/parallel [(animated/spring *angle {:from 0 :to 3600})
-                                        (animated/timing *cy {:from 450 :to 1000 :duration 1500})])])
+(animated/order [(animated/parallel [(animated/spring *angle {:from 0 :to 3600 :stiffness 20 :damping 4 :mass 3})
+                                     (animated/timing *cx {:from 450 :to 1500 :duration 3000 :ease identity})])
+                 (animated/parallel [(animated/spring *angle {:from 0 :to 3600 :stiffness 20 :damping 4 :mass 3})
+                                     (animated/timing *cy {:from 550 :to 1000 :ease identity :duration 3000})])
+                 (animated/parallel [(animated/spring *cx {:from 1500 :to 450})
+                                     (animated/spring *angle {:from 0 :to 20000})
+                                     (animated/spring *cy {:from 1500 :to 550})])])
 ```
 
 ## License
