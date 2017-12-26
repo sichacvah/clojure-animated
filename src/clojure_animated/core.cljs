@@ -133,7 +133,7 @@
         a (/ f mass)]
     [v a]))
 
-(defn rk4* [x v time config]
+(defn rk4 [x v time config]
   (let [dt (min 1 (/ time 10))
         dt2 (* dt 0.5)
         [av aa] (eval-spring 0.0  x v 0.0 config)
@@ -144,7 +144,12 @@
         dv (/ (+ aa (* 2.0 (+ ba ca)) da) 6.0)]
       [(+ x (* dx dt)) (+ v (* dv dt))]))
 
-(def rk4 (memoize rk4*))
+
+(defn is-valid? [n] 
+  (and (number? n)
+       (not ^boolean (js/isNaN n))
+       (not (identical? n js/Infinity))))
+
 
 (deftype Spring [config *value state ^:volatile-mutable raf ^:volatile-mutable cb]
   CompositeAnimation
@@ -175,7 +180,7 @@
           [x v] (rk4 prev-x prev-v dt config)]
         (if (is-done? this state)
           (assoc state :value to :time time :velocity 0)
-          (assoc state :value x  :time time :velocity v)))))
+          (assoc state :value (if (is-valid? x) x to) :time time :velocity (if (is-valid? v) v to))))))
 
 (defn spring [*value config]
   (let [cfg (merge spring-config config)]
@@ -223,7 +228,7 @@
   (stop! [this]
     (let []
       (doseq [animation animations-to-run]
-        (when (active? animation) (stop! animation)))
+         (stop! animation))
       (when (some? cb) (cb {:finished false})))))
 
 
