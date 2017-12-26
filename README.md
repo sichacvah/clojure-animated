@@ -28,7 +28,7 @@ A Clojurescript lib for animate things
 
 ```
 
-You can also compose animations
+### Animation composition
 
 ```clojure
 (animated/order [(animated/parallel [(animated/spring *angle {:from 0 :to 3600 :stiffness 20 :damping 4 :mass 3})
