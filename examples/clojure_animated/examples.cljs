@@ -1,6 +1,7 @@
 (ns clojure-animated.examples
   (:require
     [rum.core :as rum]
+    [clojure-animated.easing :as easing]
     [clojure-animated.core :as animated]))
 
 (enable-console-print!)
@@ -50,8 +51,8 @@
   (let [*angle (::angle state)
         *cy    (::cy state)
         *cx    (::cx state)
-        animation (animated/order    [(animated/parallel [(animated/spring *angle {:from 0 :to 3600 :stiffness 20 :damping 4 :mass 3})
-                                                          (animated/timing *cx {:from 450 :to 1500 :duration 3000 :ease identity})])
+        animation (animated/order    [(animated/parallel [(animated/spring *angle {:from 0 :to 36000 :stiffness 20 :damping 4 :mass 3})
+                                                          (animated/timing *cx {:from 450 :to 1500 :duration 3000 :ease easing/elastic-ease})])
                                       (animated/parallel [(animated/spring *angle {:from 0 :to 3600 :stiffness 20 :damping 4 :mass 3})
                                                           (animated/timing *cy {:from 550 :to 1000 :ease identity :duration 3000})])
                                       (animated/parallel [(animated/spring *cx {:from 1500 :to 450})
